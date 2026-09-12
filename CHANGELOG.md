@@ -1,8 +1,12 @@
 # Changelog
 
-## v0.2.1 — 2026-09-11
+## v0.2.2 — 2026-09-11
 
-- No functional change. First release published via the npm Trusted Publisher (GitHub Actions OIDC), verifying the CI publish flow end-to-end.
+- CI fix: pin a current npm CLI (`npm install -g npm@latest`) in the publish workflow. Node 22's bundled npm predates OIDC trusted-publishing support; the v0.2.1 attempt signed provenance successfully but 404'd on the actual publish PUT.
+
+## v0.2.1 — 2026-09-11 (never published)
+
+- No functional change. Attempted first release via the npm Trusted Publisher (GitHub Actions OIDC) — failed at the publish step; see v0.2.2.
 
 ## v0.2.0 — 2026-09-11
 
