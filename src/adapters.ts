@@ -46,11 +46,18 @@ export const openai: Adapter = {
   id: "openai",
   detect: (r) => {
     const u = obj(r.usage);
-    return !!u && ("prompt_tokens" in u || "completion_tokens" in u);
+    if (!u) return false;
+    if ("prompt_tokens" in u || "completion_tokens" in u) return true; // Chat Completions
+    // Responses API (POST /v1/responses): usage.input_tokens/output_tokens —
+    // the same key names Anthropic uses. r.object === "response" is the
+    // unambiguous OpenAI-only marker; see the anthropic adapter below.
+    return r.object === "response" && "input_tokens" in u && "output_tokens" in u;
   },
   extract: (r, opts) => {
     const u = obj(r.usage) ?? {};
-    return build("openai", "openai", str(r.model), num(u.prompt_tokens), num(u.completion_tokens), opts);
+    const input = num(u.prompt_tokens) ?? num(u.input_tokens);
+    const output = num(u.completion_tokens) ?? num(u.output_tokens);
+    return build("openai", "openai", str(r.model), input, output, opts);
   }
 };
 
@@ -58,7 +65,13 @@ export const anthropic: Adapter = {
   id: "anthropic",
   detect: (r) => {
     const u = obj(r.usage);
-    return !!u && "input_tokens" in u && "output_tokens" in u;
+    if (!u || !("input_tokens" in u) || !("output_tokens" in u)) return false;
+    // Anthropic's Messages API uses the same usage.input_tokens/output_tokens
+    // names as OpenAI's Responses API. Anthropic responses carry
+    // type: "message"; OpenAI's carry object: "response". Trust an explicit
+    // Anthropic marker when present, otherwise fall back to "not the OpenAI
+    // marker" so older/looser captures without either field still match.
+    return r.type === "message" || r.object !== "response";
   },
   extract: (r, opts) => {
     const u = obj(r.usage) ?? {};

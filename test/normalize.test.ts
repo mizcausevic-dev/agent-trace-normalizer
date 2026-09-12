@@ -34,6 +34,27 @@ describe("auto-detection", () => {
     expect(u).toMatchObject({ provider: "gcp.gemini", model: "gemini-2.5-pro", inputTokens: 40, outputTokens: 12, source: "gemini" });
   });
 
+  it("normalizes an OpenAI Responses API response, not Anthropic", () => {
+    // Responses API usage uses input_tokens/output_tokens — the same key
+    // names Anthropic uses. object: "response" is what disambiguates it.
+    const u = normalize({
+      object: "response",
+      model: "gpt-5",
+      usage: { input_tokens: 500, output_tokens: 120 }
+    });
+    expect(u).toMatchObject({ provider: "openai", model: "gpt-5", inputTokens: 500, outputTokens: 120, source: "openai" });
+  });
+
+  it("still normalizes a genuine Anthropic response carrying type: message", () => {
+    const u = normalize({
+      type: "message",
+      role: "assistant",
+      model: "claude-opus-4-7",
+      usage: { input_tokens: 20, output_tokens: 8 }
+    });
+    expect(u).toMatchObject({ provider: "anthropic", inputTokens: 20, outputTokens: 8, source: "anthropic" });
+  });
+
   it("stamps operation default chat and honours an override", () => {
     expect(normalize({ model: "m", usage: { prompt_tokens: 1, completion_tokens: 1 } }).operation).toBe("chat");
     expect(

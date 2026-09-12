@@ -1,6 +1,6 @@
 {
   "name": "agent-trace-normalizer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Normalize raw LLM provider responses (OpenAI / Anthropic / AWS Bedrock / Google Gemini) into a canonical usage record — the adapter front-end for GenAI cost and tracing pipelines.",
   "type": "module",
   "license": "AGPL-3.0-or-later",

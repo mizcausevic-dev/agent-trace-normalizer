@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.1 — 2026-09-11
+
+- Fix: OpenAI Responses API payloads (`usage.input_tokens`/`output_tokens`, `object: "response"`) were misdetected as Anthropic, since Anthropic's Messages API uses the same usage field names. The openai adapter now recognizes both shapes; the anthropic adapter checks for the OpenAI Responses marker before claiming a match.
+- Test: regression coverage for both the Responses API shape and a genuine Anthropic response carrying `type: "message"`.
+
 ## v0.1.0 — 2026-05-25
 
 - Initial release: normalize raw LLM provider responses into a canonical usage record.
