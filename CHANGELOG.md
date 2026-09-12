@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.1 — 2026-09-11
+
+- No functional change. First release published via the npm Trusted Publisher (GitHub Actions OIDC), verifying the CI publish flow end-to-end.
+
 ## v0.2.0 — 2026-09-11
 
 - Add `cacheReadTokens` / `cacheWriteTokens` / `reasoningTokens` to `NormalizedUsage`, populated from OpenAI (`prompt_tokens_details`/`completion_tokens_details`, `input_tokens_details`/`output_tokens_details`), Anthropic (`cache_read_input_tokens`/`cache_creation_input_tokens`), Bedrock (`cacheReadInputTokens`/`cacheWriteInputTokens`), and Gemini (`cachedContentTokenCount`/`thoughtsTokenCount`), when the provider reports them. Already included in `inputTokens`/`outputTokens`; broken out because they bill at different rates.
