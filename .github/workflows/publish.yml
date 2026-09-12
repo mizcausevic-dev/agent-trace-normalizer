@@ -24,6 +24,10 @@ jobs:
         with:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
+      # Node 22's bundled npm predates full OIDC trusted-publishing support
+      # (needs npm >= 11.5.1); the initial rollout of this workflow 404'd on
+      # the actual publish PUT even though provenance signing succeeded.
+      - run: npm install -g npm@latest
       - run: npm install
       - run: npm run lint
       - run: npm run typecheck
