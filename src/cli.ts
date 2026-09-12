@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 import { normalizeMany } from "./normalize.js";
 import type { NormalizeOptions, ProviderId, RawResponse } from "./types.js";
 
-const PROVIDERS: ProviderId[] = ["openai", "anthropic", "bedrock", "gemini", "generic"];
+const PROVIDERS: ProviderId[] = ["openai", "anthropic", "bedrock", "gemini"];
 
 interface Args {
   source?: string;

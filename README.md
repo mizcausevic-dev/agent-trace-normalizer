@@ -44,12 +44,25 @@ const { usage: records, errors } = normalizeMany(mixedBatch, { model: "fallback"
 
 | Provider | Detected via | Tokens read from |
 |---|---|---|
-| OpenAI | `usage.prompt_tokens` / `completion_tokens` | same |
-| Anthropic | `usage.input_tokens` + `output_tokens` | same |
+| OpenAI (Chat Completions) | `usage.prompt_tokens` / `completion_tokens` | same |
+| OpenAI (Responses API) | `object: "response"` + `usage.input_tokens` / `output_tokens` | same |
+| Anthropic | `usage.input_tokens` + `output_tokens` (without the `object: "response"` marker) | same |
 | AWS Bedrock | `usage.inputTokens` + `outputTokens` (camelCase) | same; model via `modelId` or `--model` |
 | Google Gemini | `usageMetadata` | `promptTokenCount` / `candidatesTokenCount`; model via `modelVersion` |
 
 Auto-detection tries the more specific shapes first. Force one with `--provider` / the `provider` option, and supply a fallback `model` when the response body omits it.
+
+Anthropic's Messages API and OpenAI's Responses API both report usage as `input_tokens`/`output_tokens`; auto-detection disambiguates them using OpenAI's `object: "response"` marker (and Anthropic's `type: "message"` marker, when present).
+
+### Cache and reasoning tokens
+
+When a provider reports them, the normalized record also carries:
+
+- `cacheReadTokens` — input tokens served from a prompt cache at a discounted rate (OpenAI, Anthropic, Bedrock, Gemini)
+- `cacheWriteTokens` — input tokens written to a prompt cache, billed at a premium (Anthropic, Bedrock)
+- `reasoningTokens` — output tokens spent on internal reasoning (OpenAI o-series/Responses API, Gemini thinking models)
+
+All three are already included in `inputTokens`/`outputTokens`; they're broken out because they bill at different rates than plain input/output. Omitted entirely when the provider doesn't report them.
 
 ## License
 

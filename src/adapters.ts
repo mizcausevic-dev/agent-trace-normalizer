@@ -22,17 +22,20 @@ export interface Adapter {
   extract(r: RawResponse, opts: NormalizeOptions): NormalizedUsage | undefined;
 }
 
+type Extras = Partial<Pick<NormalizedUsage, "cacheReadTokens" | "cacheWriteTokens" | "reasoningTokens">>;
+
 function build(
   id: ProviderId,
   provider: string,
   model: string | undefined,
   input: number | undefined,
   output: number | undefined,
-  opts: NormalizeOptions
+  opts: NormalizeOptions,
+  extras: Extras = {}
 ): NormalizedUsage | undefined {
   const m = model ?? opts.model;
   if (m === undefined || input === undefined || output === undefined) return undefined;
-  return {
+  const usage: NormalizedUsage = {
     provider,
     model: m,
     inputTokens: input,
@@ -40,6 +43,10 @@ function build(
     operation: opts.operation ?? "chat",
     source: id
   };
+  if (extras.cacheReadTokens !== undefined) usage.cacheReadTokens = extras.cacheReadTokens;
+  if (extras.cacheWriteTokens !== undefined) usage.cacheWriteTokens = extras.cacheWriteTokens;
+  if (extras.reasoningTokens !== undefined) usage.reasoningTokens = extras.reasoningTokens;
+  return usage;
 }
 
 export const openai: Adapter = {
@@ -57,7 +64,14 @@ export const openai: Adapter = {
     const u = obj(r.usage) ?? {};
     const input = num(u.prompt_tokens) ?? num(u.input_tokens);
     const output = num(u.completion_tokens) ?? num(u.output_tokens);
-    return build("openai", "openai", str(r.model), input, output, opts);
+    // Chat Completions nests these under prompt/completion_tokens_details;
+    // the Responses API nests them under input/output_tokens_details.
+    const inputDetails = obj(u.prompt_tokens_details) ?? obj(u.input_tokens_details);
+    const outputDetails = obj(u.completion_tokens_details) ?? obj(u.output_tokens_details);
+    return build("openai", "openai", str(r.model), input, output, opts, {
+      cacheReadTokens: num(inputDetails?.cached_tokens),
+      reasoningTokens: num(outputDetails?.reasoning_tokens)
+    });
   }
 };
 
@@ -75,7 +89,10 @@ export const anthropic: Adapter = {
   },
   extract: (r, opts) => {
     const u = obj(r.usage) ?? {};
-    return build("anthropic", "anthropic", str(r.model), num(u.input_tokens), num(u.output_tokens), opts);
+    return build("anthropic", "anthropic", str(r.model), num(u.input_tokens), num(u.output_tokens), opts, {
+      cacheReadTokens: num(u.cache_read_input_tokens),
+      cacheWriteTokens: num(u.cache_creation_input_tokens)
+    });
   }
 };
 
@@ -93,7 +110,12 @@ export const bedrock: Adapter = {
       str(r.modelId) ?? str(r.model),
       num(u.inputTokens),
       num(u.outputTokens),
-      opts
+      opts,
+      {
+        // Converse API prompt caching (camelCase, matching the rest of this shape).
+        cacheReadTokens: num(u.cacheReadInputTokens),
+        cacheWriteTokens: num(u.cacheWriteInputTokens)
+      }
     );
   }
 };
@@ -109,7 +131,12 @@ export const gemini: Adapter = {
       str(r.modelVersion) ?? str(r.model),
       num(u.promptTokenCount),
       num(u.candidatesTokenCount),
-      opts
+      opts,
+      {
+        cacheReadTokens: num(u.cachedContentTokenCount),
+        // Thinking-model internal reasoning tokens.
+        reasoningTokens: num(u.thoughtsTokenCount)
+      }
     );
   }
 };

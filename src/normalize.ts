@@ -6,12 +6,11 @@ import type {
   RawResponse
 } from "./types.js";
 
-const byId: Record<ProviderId, (typeof adapters)[number] | undefined> = {
+const byId: Record<ProviderId, (typeof adapters)[number]> = {
   openai,
   anthropic,
   bedrock,
-  gemini,
-  generic: undefined
+  gemini
 };
 
 /**
@@ -26,9 +25,9 @@ export function normalize(
   if (typeof response !== "object" || response === null) {
     throw new Error("response must be an object");
   }
-  if (opts.provider && opts.provider !== "generic") {
+  if (opts.provider) {
     const adapter = byId[opts.provider];
-    const out = adapter?.extract(response, opts);
+    const out = adapter.extract(response, opts);
     if (!out) {
       throw new Error(
         `forced provider "${opts.provider}" could not extract usage (missing tokens/model?)`
