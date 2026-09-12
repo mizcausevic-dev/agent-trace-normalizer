@@ -55,6 +55,65 @@ describe("auto-detection", () => {
     expect(u).toMatchObject({ provider: "anthropic", inputTokens: 20, outputTokens: 8, source: "anthropic" });
   });
 
+  it("breaks out OpenAI cache-read and reasoning tokens (Chat Completions)", () => {
+    const u = normalize({
+      model: "gpt-5",
+      usage: {
+        prompt_tokens: 500,
+        completion_tokens: 200,
+        prompt_tokens_details: { cached_tokens: 300 },
+        completion_tokens_details: { reasoning_tokens: 80 }
+      }
+    });
+    expect(u).toMatchObject({ cacheReadTokens: 300, reasoningTokens: 80 });
+  });
+
+  it("breaks out OpenAI cache-read and reasoning tokens (Responses API)", () => {
+    const u = normalize({
+      object: "response",
+      model: "gpt-5",
+      usage: {
+        input_tokens: 500,
+        output_tokens: 200,
+        input_tokens_details: { cached_tokens: 300 },
+        output_tokens_details: { reasoning_tokens: 80 }
+      }
+    });
+    expect(u).toMatchObject({ cacheReadTokens: 300, reasoningTokens: 80 });
+  });
+
+  it("breaks out Anthropic cache read/write tokens", () => {
+    const u = normalize({
+      type: "message",
+      model: "claude-opus-4-7",
+      usage: { input_tokens: 20, output_tokens: 8, cache_read_input_tokens: 15, cache_creation_input_tokens: 5 }
+    });
+    expect(u).toMatchObject({ cacheReadTokens: 15, cacheWriteTokens: 5 });
+  });
+
+  it("breaks out Bedrock cache read/write tokens", () => {
+    const u = normalize(
+      { usage: { inputTokens: 30, outputTokens: 9, cacheReadInputTokens: 10, cacheWriteInputTokens: 4 } },
+      { model: "anthropic.claude-3" }
+    );
+    expect(u).toMatchObject({ cacheReadTokens: 10, cacheWriteTokens: 4 });
+  });
+
+  it("breaks out Gemini cache-read and reasoning tokens", () => {
+    const u = normalize({
+      modelVersion: "gemini-2.5-pro",
+      usageMetadata: { promptTokenCount: 40, candidatesTokenCount: 12, cachedContentTokenCount: 20, thoughtsTokenCount: 6 }
+    });
+    expect(u).toMatchObject({ cacheReadTokens: 20, reasoningTokens: 6 });
+  });
+
+  it("omits cache/reasoning fields entirely when the provider doesn't report them", () => {
+    const u = normalize({ model: "gpt-4o", usage: { prompt_tokens: 10, completion_tokens: 5 } });
+    expect(u).not.toHaveProperty("cacheReadTokens");
+    expect(u).not.toHaveProperty("cacheWriteTokens");
+    expect(u).not.toHaveProperty("reasoningTokens");
+  });
+
   it("stamps operation default chat and honours an override", () => {
     expect(normalize({ model: "m", usage: { prompt_tokens: 1, completion_tokens: 1 } }).operation).toBe("chat");
     expect(

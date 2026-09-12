@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.2.0 — 2026-09-11
+
+- Add `cacheReadTokens` / `cacheWriteTokens` / `reasoningTokens` to `NormalizedUsage`, populated from OpenAI (`prompt_tokens_details`/`completion_tokens_details`, `input_tokens_details`/`output_tokens_details`), Anthropic (`cache_read_input_tokens`/`cache_creation_input_tokens`), Bedrock (`cacheReadInputTokens`/`cacheWriteInputTokens`), and Gemini (`cachedContentTokenCount`/`thoughtsTokenCount`), when the provider reports them. Already included in `inputTokens`/`outputTokens`; broken out because they bill at different rates.
+- Remove `"generic"` from `ProviderId` and the CLI's `--provider` values — it was accepted but silently treated as "auto-detect," not a real adapter. Forcing an unsupported value now errors instead of behaving unpredictably.
+- Fix: `package.json` `repository.url` normalized to the canonical `git+https://...git` form (npm was silently auto-correcting it on every publish); added `homepage` and `bugs` fields.
+
 ## v0.1.1 — 2026-09-11
 
 - Fix: OpenAI Responses API payloads (`usage.input_tokens`/`output_tokens`, `object: "response"`) were misdetected as Anthropic, since Anthropic's Messages API uses the same usage field names. The openai adapter now recognizes both shapes; the anthropic adapter checks for the OpenAI Responses marker before claiming a match.

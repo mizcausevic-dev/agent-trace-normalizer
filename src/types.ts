@@ -13,14 +13,26 @@ export interface NormalizedUsage {
   operation?: string;
   /** Source adapter that produced this record. */
   source: ProviderId;
+  /**
+   * Input tokens served from a prompt cache at a discounted rate, when the
+   * provider reports it. Already included in inputTokens; broken out for
+   * cost detail since cache reads bill at a different rate than fresh input.
+   */
+  cacheReadTokens?: number;
+  /**
+   * Input tokens written to a prompt cache (Anthropic-specific; billed at a
+   * premium over normal input). Already included in inputTokens.
+   */
+  cacheWriteTokens?: number;
+  /**
+   * Output tokens spent on internal reasoning (OpenAI o-series/Responses API
+   * reasoning_tokens; Gemini thinking-model thoughtsTokenCount). Already
+   * included in outputTokens; broken out for cost detail.
+   */
+  reasoningTokens?: number;
 }
 
-export type ProviderId =
-  | "openai"
-  | "anthropic"
-  | "bedrock"
-  | "gemini"
-  | "generic";
+export type ProviderId = "openai" | "anthropic" | "bedrock" | "gemini";
 
 /** A raw provider response, shape unknown until an adapter claims it. */
 export type RawResponse = Record<string, unknown>;
