@@ -1,0 +1,32 @@
+name: publish
+
+# Publishes to npm via Trusted Publishing (OIDC) — no npm token or OTP
+# involved. Requires this exact repo + workflow file to be registered as a
+# Trusted Publisher on the npm package's "Publishing access" settings
+# (npmjs.com -> package -> Settings -> Trusted Publisher -> GitHub Actions).
+# npm CLI >= 11.5.1 auto-detects the GitHub Actions OIDC token when
+# id-token: write is granted; nothing else to configure here.
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    name: build, verify, publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - run: npm install
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run coverage
+      - run: npm run build
+      - run: npm publish --provenance --access public
