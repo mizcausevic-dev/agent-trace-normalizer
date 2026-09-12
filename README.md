@@ -2,7 +2,7 @@
 
 Normalize raw LLM provider responses — **OpenAI, Anthropic, AWS Bedrock, Google Gemini** — into one canonical usage record. It's the adapter front-end for GenAI cost and tracing: point it at whatever your providers return, get back a uniform `{ provider, model, inputTokens, outputTokens }` you can meter, bill, or trace.
 
-Part of the [Kinetic Gain](https://suite.kineticgain.com) GenAI observability lane. Its output feeds [`llm-cost-span-exporter`](https://github.com/mizcausevic-dev/llm-cost-span-exporter) directly.
+Its output feeds [`llm-cost-span-exporter`](https://github.com/mizcausevic-dev/llm-cost-span-exporter) directly, which turns normalized usage records into cost-annotated OpenTelemetry GenAI spans.
 
 ## Why
 
