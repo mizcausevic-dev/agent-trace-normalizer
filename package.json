@@ -3,7 +3,7 @@
   "version": "0.3.0",
   "description": "Normalize raw LLM provider responses (OpenAI / Anthropic / AWS Bedrock / Google Gemini) into a canonical usage record — the adapter front-end for GenAI cost and tracing pipelines.",
   "type": "module",
-  "license": "AGPL-3.0-or-later",
+  "license": "Apache-2.0",
   "author": "mizcausevic-dev",
   "repository": {
     "type": "git",
@@ -37,8 +37,11 @@
   },
   "files": [
     "dist",
+    "src",
+    "tsconfig.json",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "engines": {
     "node": ">=20"

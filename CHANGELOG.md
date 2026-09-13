@@ -27,6 +27,14 @@ Anthropic's Messages API and OpenAI's Responses/Agents usage report `input_token
 - Malformed JSON input no longer echoes a fragment of the raw file content in its error message.
 - A pretty-printed (multi-line) single JSON object is now accepted as input; previously only single-line objects, arrays, and JSONL were.
 
+**License change: AGPL-3.0-or-later -> Apache-2.0.**
+
+`agent-trace-normalizer` has 0 downloads and no external contributors; the license change needed no third-party consent. Copyright is held by Kinetic Gain LLC.
+
+- The normalizer is a ~200-line adapter layer with no moat to defend, its value is being easy to depend on. AGPL made that impossible in practice: a copyleft dependency in a server application is a blanket-ban for most engineering orgs regardless of how the analysis actually shakes out, since AGPL's network-interaction clause creates ambiguity most legal teams won't spend time resolving case by case.
+- **Published versions 0.1.0 through 0.2.2 remain AGPL-3.0-or-later.** A license grant already made can't be retracted; anyone depending on one of those versions keeps that license for that version. Every version from 0.3.0 onward is Apache-2.0.
+- `package.json`'s `files` array now includes `src` and `tsconfig.json` in addition to `dist`, closing an AGPL-era gap where the published tarball shipped compiled output with no corresponding source, moot under Apache-2.0 (no source-offer obligation), but source availability without hunting down a matching git tag is worth keeping regardless of license.
+
 ## v0.2.2 — 2026-09-11
 
 - CI fix: pin a current npm CLI (`npm install -g npm@latest`) in the publish workflow. Node 22's bundled npm predates OIDC trusted-publishing support; the v0.2.1 attempt signed provenance successfully but 404'd on the actual publish PUT.
