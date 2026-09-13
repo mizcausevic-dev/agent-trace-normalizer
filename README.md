@@ -68,4 +68,6 @@ This is a real design point, not a formality: OpenAI's own `input_tokens`/`outpu
 
 ## License
 
-AGPL-3.0-or-later — see [LICENSE](LICENSE).
+Apache-2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE). Copyright Kinetic Gain LLC.
+
+Versions through 0.2.2 were published under AGPL-3.0-or-later; that grant can't be retracted, so anyone already depending on one of those versions under AGPL terms keeps that license for that version. Every version from 0.3.0 onward is Apache-2.0.
