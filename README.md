@@ -45,14 +45,14 @@ const { usage: records, errors } = normalizeMany(mixedBatch, { model: "fallback"
 | Provider | Detected via | Tokens read from |
 |---|---|---|
 | OpenAI (Chat Completions) | `usage.prompt_tokens` / `completion_tokens` | same |
-| OpenAI (Responses API) | `object: "response"` + `usage.input_tokens` / `output_tokens` | same |
-| Anthropic | `usage.input_tokens` + `output_tokens` (without the `object: "response"` marker) | same |
+| OpenAI (Responses API / Agents SDK) | `object: "response"`, or `input_tokens_details` / `output_tokens_details` present, + `usage.input_tokens` / `output_tokens` | same |
+| Anthropic | `type: "message"` / `"message_start"`, or `cache_read_input_tokens` / `cache_creation_input_tokens` present, + `usage.input_tokens` / `output_tokens` | same |
 | AWS Bedrock | `usage.inputTokens` + `outputTokens` (camelCase) | same; model via `modelId` or `--model` |
 | Google Gemini | `usageMetadata` | `promptTokenCount` / `candidatesTokenCount`; model via `modelVersion` |
 
 Auto-detection tries the more specific shapes first. Force one with `--provider` / the `provider` option, and supply a fallback `model` when the response body omits it.
 
-Anthropic's Messages API and OpenAI's Responses API both report usage as `input_tokens`/`output_tokens`; auto-detection disambiguates them using OpenAI's `object: "response"` marker (and Anthropic's `type: "message"` marker, when present).
+Anthropic's Messages API and OpenAI's Responses/Agents usage both report `input_tokens`/`output_tokens` under the same names. Since v0.3.0, disambiguating either one requires positive evidence, `object: "response"` or an OpenAI-only `*_tokens_details` field for OpenAI; `type: "message"`/`"message_start"` or a `cache_read_input_tokens`/`cache_creation_input_tokens` field for Anthropic. A bare `{ input_tokens, output_tokens }` with none of those throws rather than guessing, since versions before 0.3.0 silently defaulted every such shape to Anthropic. See [CHANGELOG](CHANGELOG.md).
 
 ### Cache and reasoning tokens
 

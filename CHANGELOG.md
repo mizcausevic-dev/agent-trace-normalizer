@@ -11,6 +11,14 @@ The OpenTelemetry GenAI semantic conventions say the total input token count MAY
 - Gemini's `candidatesTokenCount`/`thoughtsTokenCount` relationship is not stated in Google's public docs and is left unchanged pending a live API check; do not assume it follows the same pattern as Anthropic/Bedrock.
 - Added a golden-invariant test (`inputTokens >= cacheReadTokens + cacheWriteTokens`, `outputTokens >= reasoningTokens`) per provider so this class of bug fails a test, not just a doc mismatch.
 
+**Breaking: a bare `{ input_tokens, output_tokens }` payload with no provider marker now throws instead of defaulting to Anthropic.**
+
+Anthropic's Messages API and OpenAI's Responses/Agents usage report `input_tokens`/`output_tokens` under identical key names. v0.1.1 fixed detection for the case where OpenAI's `object: "response"` marker is present, but the fallback direction, no marker on either side, still defaulted to Anthropic (a catch-all `r.object !== "response"`). This silently mislabeled any marker-less OpenAI Responses/Agents usage object as Anthropic and dropped its cache and reasoning tokens with no error, the same failure class independently found in a different tool's normalizer during this review.
+
+- Fix: `anthropic` detection now requires positive evidence (`type: "message"`/`"message_start"`, or a `cache_read_input_tokens`/`cache_creation_input_tokens` field). `openai` detection additionally treats `input_tokens_details`/`output_tokens_details` as a hard signal, those key names don't exist in Anthropic's API, so their presence alone identifies the shape even without the Responses API envelope (this is exactly what an OpenAI Agents SDK usage object looks like).
+- **If you were relying on a bare `input_tokens`/`output_tokens` payload with no marker resolving to Anthropic, it now throws `no adapter recognized this response shape`.** Pass `{ provider: "anthropic" }` (or `--provider anthropic`) explicitly for that shape going forward.
+- Hardening: adapter `detect()` guards use `Object.hasOwn` instead of the `in` operator, and the provider lookup table in `normalize()` uses a null-prototype object, closing a `__proto__`-as-provider-name path for an embedded library running inside another process's prototype chain.
+
 ## v0.2.2 — 2026-09-11
 
 - CI fix: pin a current npm CLI (`npm install -g npm@latest`) in the publish workflow. Node 22's bundled npm predates OIDC trusted-publishing support; the v0.2.1 attempt signed provenance successfully but 404'd on the actual publish PUT.

@@ -54,11 +54,17 @@ export const openai: Adapter = {
   detect: (r) => {
     const u = obj(r.usage);
     if (!u) return false;
-    if ("prompt_tokens" in u || "completion_tokens" in u) return true; // Chat Completions
-    // Responses API (POST /v1/responses): usage.input_tokens/output_tokens —
-    // the same key names Anthropic uses. r.object === "response" is the
-    // unambiguous OpenAI-only marker; see the anthropic adapter below.
-    return r.object === "response" && "input_tokens" in u && "output_tokens" in u;
+    if (Object.hasOwn(u, "prompt_tokens") || Object.hasOwn(u, "completion_tokens")) return true; // Chat Completions
+    // Responses API / Agents SDK usage: usage.input_tokens/output_tokens —
+    // the same key names Anthropic uses. Two independent ways to positively
+    // identify this as OpenAI rather than Anthropic, either is sufficient:
+    //  - r.object === "response": the unambiguous Responses API envelope.
+    //  - input_tokens_details / output_tokens_details present: Anthropic
+    //    never emits these key names, so their presence alone is a hard
+    //    OpenAI signal even without the envelope (e.g. an OpenAI Agents SDK
+    //    usage object, which carries no top-level object field at all).
+    if (!Object.hasOwn(u, "input_tokens") || !Object.hasOwn(u, "output_tokens")) return false;
+    return r.object === "response" || Object.hasOwn(u, "input_tokens_details") || Object.hasOwn(u, "output_tokens_details");
   },
   extract: (r, opts) => {
     const u = obj(r.usage) ?? {};
@@ -79,13 +85,23 @@ export const anthropic: Adapter = {
   id: "anthropic",
   detect: (r) => {
     const u = obj(r.usage);
-    if (!u || !("input_tokens" in u) || !("output_tokens" in u)) return false;
+    if (!u || !Object.hasOwn(u, "input_tokens") || !Object.hasOwn(u, "output_tokens")) return false;
+    // input_tokens_details / output_tokens_details are OpenAI-only key names
+    // (Anthropic never emits them) -- a hard veto, even over an explicit
+    // type: "message" on a malformed or mixed-shape capture.
+    if (Object.hasOwn(u, "input_tokens_details") || Object.hasOwn(u, "output_tokens_details")) return false;
     // Anthropic's Messages API uses the same usage.input_tokens/output_tokens
-    // names as OpenAI's Responses API. Anthropic responses carry
-    // type: "message"; OpenAI's carry object: "response". Trust an explicit
-    // Anthropic marker when present, otherwise fall back to "not the OpenAI
-    // marker" so older/looser captures without either field still match.
-    return r.type === "message" || r.object !== "response";
+    // names as OpenAI's Responses/Agents usage, so this requires positive
+    // Anthropic evidence rather than falling back to "not the OpenAI
+    // marker" for anything left over. A bare {input_tokens, output_tokens}
+    // with no marker on either side is genuinely ambiguous and now throws
+    // instead of silently guessing a price table (v0.3.0, see CHANGELOG).
+    return (
+      r.type === "message" ||
+      r.type === "message_start" ||
+      Object.hasOwn(u, "cache_read_input_tokens") ||
+      Object.hasOwn(u, "cache_creation_input_tokens")
+    );
   },
   extract: (r, opts) => {
     const u = obj(r.usage) ?? {};
@@ -107,7 +123,7 @@ export const bedrock: Adapter = {
   id: "bedrock",
   detect: (r) => {
     const u = obj(r.usage);
-    return !!u && "inputTokens" in u && "outputTokens" in u;
+    return !!u && Object.hasOwn(u, "inputTokens") && Object.hasOwn(u, "outputTokens");
   },
   extract: (r, opts) => {
     const u = obj(r.usage) ?? {};

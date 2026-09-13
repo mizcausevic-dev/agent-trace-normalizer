@@ -6,12 +6,15 @@ import type {
   RawResponse
 } from "./types.js";
 
-const byId: Record<ProviderId, (typeof adapters)[number]> = {
+// Object.create(null): no prototype, so a caller passing an untyped
+// opts.provider (bypassing the ProviderId union at runtime, e.g. from
+// plain JS) can't reach Object.prototype via byId["__proto__"].
+const byId: Record<ProviderId, (typeof adapters)[number]> = Object.assign(Object.create(null), {
   openai,
   anthropic,
   bedrock,
   gemini
-};
+});
 
 /**
  * Normalize one raw provider response into a canonical usage record.
@@ -27,6 +30,9 @@ export function normalize(
   }
   if (opts.provider) {
     const adapter = byId[opts.provider];
+    if (!adapter) {
+      throw new Error(`forced provider "${opts.provider}" is not a supported adapter`);
+    }
     const out = adapter.extract(response, opts);
     if (!out) {
       throw new Error(
