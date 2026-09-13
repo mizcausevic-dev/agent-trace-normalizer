@@ -64,6 +64,8 @@ When a provider reports them, the normalized record also carries:
 
 All three are already included in `inputTokens`/`outputTokens`; they're broken out because they bill at different rates than plain input/output. Omitted entirely when the provider doesn't report them.
 
+This is a real design point, not a formality: OpenAI's own `input_tokens`/`output_tokens` already include cached and reasoning tokens, but Anthropic's `input_tokens` and Bedrock's `inputTokens` do not, per each vendor's own docs (`total = cache_read + cache_creation + input_tokens`). This library adds the cache tokens back in for Anthropic and Bedrock so `inputTokens` means the same thing across every provider, matching the OpenTelemetry GenAI semantic convention this package targets. Versions before 0.3.0 passed Anthropic's and Bedrock's `input_tokens`/`inputTokens` straight through, undercounting total input on any cache-heavy request from those two providers, see [CHANGELOG](CHANGELOG.md).
+
 ## License
 
 AGPL-3.0-or-later — see [LICENSE](LICENSE).

@@ -20,7 +20,7 @@ export interface NormalizedUsage {
    */
   cacheReadTokens?: number;
   /**
-   * Input tokens written to a prompt cache (Anthropic-specific; billed at a
+   * Input tokens written to a prompt cache (Anthropic, Bedrock; billed at a
    * premium over normal input). Already included in inputTokens.
    */
   cacheWriteTokens?: number;

@@ -89,9 +89,16 @@ export const anthropic: Adapter = {
   },
   extract: (r, opts) => {
     const u = obj(r.usage) ?? {};
-    return build("anthropic", "anthropic", str(r.model), num(u.input_tokens), num(u.output_tokens), opts, {
-      cacheReadTokens: num(u.cache_read_input_tokens),
-      cacheWriteTokens: num(u.cache_creation_input_tokens)
+    const rawInput = num(u.input_tokens);
+    const cacheRead = num(u.cache_read_input_tokens);
+    const cacheWrite = num(u.cache_creation_input_tokens);
+    // Anthropic's input_tokens excludes cache tokens:
+    // total_input_tokens = cache_read_input_tokens + cache_creation_input_tokens + input_tokens.
+    // https://platform.claude.com/docs/en/build-with-claude/prompt-caching
+    const input = rawInput === undefined ? undefined : rawInput + (cacheRead ?? 0) + (cacheWrite ?? 0);
+    return build("anthropic", "anthropic", str(r.model), input, num(u.output_tokens), opts, {
+      cacheReadTokens: cacheRead,
+      cacheWriteTokens: cacheWrite
     });
   }
 };
@@ -104,17 +111,24 @@ export const bedrock: Adapter = {
   },
   extract: (r, opts) => {
     const u = obj(r.usage) ?? {};
+    const rawInput = num(u.inputTokens);
+    const cacheRead = num(u.cacheReadInputTokens);
+    const cacheWrite = num(u.cacheWriteInputTokens);
+    // Bedrock Converse's inputTokens excludes cache tokens:
+    // total input tokens = inputTokens + cacheReadInputTokens + cacheWriteInputTokens.
+    // https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html
+    const input = rawInput === undefined ? undefined : rawInput + (cacheRead ?? 0) + (cacheWrite ?? 0);
     return build(
       "bedrock",
       "aws.bedrock",
       str(r.modelId) ?? str(r.model),
-      num(u.inputTokens),
+      input,
       num(u.outputTokens),
       opts,
       {
         // Converse API prompt caching (camelCase, matching the rest of this shape).
-        cacheReadTokens: num(u.cacheReadInputTokens),
-        cacheWriteTokens: num(u.cacheWriteInputTokens)
+        cacheReadTokens: cacheRead,
+        cacheWriteTokens: cacheWrite
       }
     );
   }

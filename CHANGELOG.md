@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.3.0 — unreleased
+
+**Breaking: `inputTokens` changes value for Anthropic and Bedrock responses that report cache tokens.**
+
+The OpenTelemetry GenAI semantic conventions say the total input token count MAY be published regardless of whether the tokens were cached, that is, `inputTokens` is meant to be the full input count across every provider. This package already claims OTel GenAI alignment and its README documents `cacheReadTokens`/`cacheWriteTokens` as "already included in `inputTokens`". That was true for OpenAI, but not for Anthropic or Bedrock: both vendors document `input_tokens`/`inputTokens` as excluding cache tokens (`total_input_tokens = cache_read_input_tokens + cache_creation_input_tokens + input_tokens` per Anthropic's and AWS's own prompt-caching docs).
+
+- Fix: Anthropic and Bedrock adapters now add `cache_read_input_tokens`/`cacheReadInputTokens` and `cache_creation_input_tokens`/`cacheWriteInputTokens` into `inputTokens`, matching the documented invariant and the OTel convention. `cacheReadTokens`/`cacheWriteTokens` are still broken out separately, unchanged.
+- **Every version from 0.2.0 through 0.2.2 undercounted `inputTokens` for any Anthropic or Bedrock response that used prompt caching.** On a cache-heavy request this is not a rounding error, a response with a small fresh-token count and a large cache-read count reported an `inputTokens` far below the real total. If you built cost/billing logic on top of `inputTokens` from those versions, cached Anthropic/Bedrock input was undercounted; re-run affected calculations after upgrading.
+- Gemini's `candidatesTokenCount`/`thoughtsTokenCount` relationship is not stated in Google's public docs and is left unchanged pending a live API check; do not assume it follows the same pattern as Anthropic/Bedrock.
+- Added a golden-invariant test (`inputTokens >= cacheReadTokens + cacheWriteTokens`, `outputTokens >= reasoningTokens`) per provider so this class of bug fails a test, not just a doc mismatch.
+
 ## v0.2.2 — 2026-09-11
 
 - CI fix: pin a current npm CLI (`npm install -g npm@latest`) in the publish workflow. Node 22's bundled npm predates OIDC trusted-publishing support; the v0.2.1 attempt signed provenance successfully but 404'd on the actual publish PUT.
