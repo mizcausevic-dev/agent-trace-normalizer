@@ -51,6 +51,7 @@
     "coverage": "vitest run --coverage",
     "demo": "tsx src/cli.ts fixtures/responses.jsonl --model bedrock-fallback-model",
     "normalize": "tsx src/cli.ts",
+    "check:no-network": "node scripts/check-no-network.mjs",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {

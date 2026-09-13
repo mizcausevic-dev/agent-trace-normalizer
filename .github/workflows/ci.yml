@@ -25,6 +25,7 @@ jobs:
       - run: npm run coverage
       - run: npm run build
       - run: npm run demo
+      - run: npm run check:no-network
 
 # Least-privilege: read-only test/CI runs. GITHUB_TOKEN gets no write to
 # anything. The publish/release flows (where they exist) carry their own

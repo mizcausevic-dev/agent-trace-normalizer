@@ -1,11 +1,12 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdtempSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { tmpdir } from "node:os";
 
 import { describe, it, expect } from "vitest";
 
 import { normalize, normalizeMany } from "../src/normalize.js";
-import { parseResponses } from "../src/cli.js";
+import { parseResponses, run } from "../src/cli.js";
 import * as api from "../src/index.js";
 import type { RawResponse } from "../src/types.js";
 
@@ -235,8 +236,55 @@ describe("parseResponses", () => {
     expect(parseResponses('{"a":1}')).toHaveLength(1);
     expect(parseResponses('{"a":1}\n{"b":2}')).toHaveLength(2);
   });
+  it("parses a pretty-printed single object, not just single-line", () => {
+    // Used to be misrouted to the JSONL branch by a newline check.
+    const pretty = JSON.stringify({ model: "m", usage: { prompt_tokens: 1, completion_tokens: 1 } }, null, 2);
+    expect(parseResponses(pretty)).toHaveLength(1);
+  });
   it("throws on a bad jsonl line", () => {
     expect(() => parseResponses('{"a":1}\n{oops')).toThrow(/line 2/);
+  });
+  it("reports the correct line number when blank lines are present", () => {
+    expect(() => parseResponses('{"a":1}\n\n{oops')).toThrow(/line 3/);
+  });
+  it("never leaks payload content in a parse error", () => {
+    try {
+      parseResponses('{"a":1}\n{"secret":"sk-FAKE1234567890",oops}');
+      throw new Error("expected parseResponses to throw");
+    } catch (e) {
+      expect((e as Error).message).not.toContain("sk-FAKE1234567890");
+      expect((e as Error).message).toMatch(/invalid JSON on line 2/);
+    }
+  });
+});
+
+describe("CLI run()", () => {
+  const tmpDir = mkdtempSync(join(tmpdir(), "atn-cli-test-"));
+  const srcFile = join(tmpDir, "in.jsonl");
+  writeFileSync(srcFile, '{"model":"m","usage":{"prompt_tokens":1,"completion_tokens":1}}\n', "utf8");
+
+  it("writes to --out and refuses to overwrite without --force", () => {
+    const outFile = join(tmpDir, "out.json");
+    expect(run([srcFile, "--out", outFile])).toBe(0);
+    expect(existsSync(outFile)).toBe(true);
+    // Second run without --force must fail loudly, not silently overwrite.
+    expect(run([srcFile, "--out", outFile])).toBe(2);
+    expect(run([srcFile, "--out", outFile, "--force"])).toBe(0);
+  });
+
+  it("exits 2, not 1, when --out cannot be written", () => {
+    const badPath = join(tmpDir, "does-not-exist-dir", "out.json");
+    expect(run([srcFile, "--out", badPath])).toBe(2);
+  });
+
+  it("rejects a flag value that looks like another flag instead of silently swallowing it", () => {
+    expect(run([srcFile, "--model", "--out"])).toBe(2);
+  });
+
+  it("treats a source filename after -- as positional, not a flag", () => {
+    const dashFile = join(tmpDir, "-weird.jsonl");
+    writeFileSync(dashFile, '{"model":"m","usage":{"prompt_tokens":1,"completion_tokens":1}}\n', "utf8");
+    expect(run(["--", dashFile])).toBe(0);
   });
 });
 
