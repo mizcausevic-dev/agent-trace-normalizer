@@ -82,21 +82,38 @@ describe("auto-detection", () => {
     expect(u).toMatchObject({ cacheReadTokens: 300, reasoningTokens: 80 });
   });
 
-  it("breaks out Anthropic cache read/write tokens", () => {
+  it("breaks out Anthropic cache read/write tokens and makes input_tokens inclusive", () => {
+    // Anthropic's own doc example shape: cache_read far exceeds input_tokens,
+    // which is exactly the case the old (20/15/5) fixture couldn't expose --
+    // 15+5=20 was numerically indistinguishable from the inclusive reading.
     const u = normalize({
       type: "message",
       model: "claude-opus-4-7",
-      usage: { input_tokens: 20, output_tokens: 8, cache_read_input_tokens: 15, cache_creation_input_tokens: 5 }
+      usage: { input_tokens: 50, output_tokens: 8, cache_read_input_tokens: 100000, cache_creation_input_tokens: 0 }
     });
-    expect(u).toMatchObject({ cacheReadTokens: 15, cacheWriteTokens: 5 });
+    expect(u).toMatchObject({ inputTokens: 100050, cacheReadTokens: 100000, cacheWriteTokens: 0 });
   });
 
-  it("breaks out Bedrock cache read/write tokens", () => {
+  it("breaks out Bedrock cache read/write tokens and makes inputTokens inclusive", () => {
     const u = normalize(
-      { usage: { inputTokens: 30, outputTokens: 9, cacheReadInputTokens: 10, cacheWriteInputTokens: 4 } },
+      { usage: { inputTokens: 30, outputTokens: 9, cacheReadInputTokens: 50000, cacheWriteInputTokens: 4 } },
       { model: "anthropic.claude-3" }
     );
-    expect(u).toMatchObject({ cacheReadTokens: 10, cacheWriteTokens: 4 });
+    expect(u).toMatchObject({ inputTokens: 50034, cacheReadTokens: 50000, cacheWriteTokens: 4 });
+  });
+
+  it("golden invariant: inputTokens/outputTokens never fall below their cache/reasoning breakdown", () => {
+    const cases: RawResponse[] = [
+      { model: "gpt-5", usage: { prompt_tokens: 500, completion_tokens: 200, prompt_tokens_details: { cached_tokens: 300 }, completion_tokens_details: { reasoning_tokens: 80 } } },
+      { type: "message", model: "claude-opus-4-7", usage: { input_tokens: 50, output_tokens: 8, cache_read_input_tokens: 100000, cache_creation_input_tokens: 0 } },
+      { usage: { inputTokens: 30, outputTokens: 9, cacheReadInputTokens: 50000, cacheWriteInputTokens: 4 } , modelId: "anthropic.claude-3" },
+      { modelVersion: "gemini-2.5-pro", usageMetadata: { promptTokenCount: 40, candidatesTokenCount: 12, cachedContentTokenCount: 20, thoughtsTokenCount: 6 } }
+    ];
+    for (const c of cases) {
+      const u = normalize(c);
+      expect(u.inputTokens).toBeGreaterThanOrEqual((u.cacheReadTokens ?? 0) + (u.cacheWriteTokens ?? 0));
+      expect(u.outputTokens).toBeGreaterThanOrEqual(u.reasoningTokens ?? 0);
+    }
   });
 
   it("breaks out Gemini cache-read and reasoning tokens", () => {
@@ -149,8 +166,10 @@ describe("normalizeMany", () => {
   const result = normalizeMany(responses(), { model: "fallback-model" });
 
   it("normalizes a mixed batch across providers", () => {
-    expect(result.usage).toHaveLength(4);
-    expect(result.usage.map((u) => u.source).sort()).toEqual(["anthropic", "bedrock", "gemini", "openai"]);
+    expect(result.usage).toHaveLength(8);
+    expect(result.usage.map((u) => u.source).sort()).toEqual([
+      "anthropic", "anthropic", "bedrock", "bedrock", "gemini", "gemini", "openai", "openai"
+    ]);
     expect(result.errors).toHaveLength(0);
   });
 
