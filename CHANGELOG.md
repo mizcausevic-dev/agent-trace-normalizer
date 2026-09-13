@@ -19,6 +19,14 @@ Anthropic's Messages API and OpenAI's Responses/Agents usage report `input_token
 - **If you were relying on a bare `input_tokens`/`output_tokens` payload with no marker resolving to Anthropic, it now throws `no adapter recognized this response shape`.** Pass `{ provider: "anthropic" }` (or `--provider anthropic`) explicitly for that shape going forward.
 - Hardening: adapter `detect()` guards use `Object.hasOwn` instead of the `in` operator, and the provider lookup table in `normalize()` uses a null-prototype object, closing a `__proto__`-as-provider-name path for an embedded library running inside another process's prototype chain.
 
+**Breaking (CLI): `--out` no longer silently overwrites an existing file, and a write failure now exits 2 instead of 1.**
+
+- **If a script runs `agent-normalize ... --out <file>` against a path that already exists, it now fails with a "file already exists" error instead of overwriting it.** Pass the new `--force` flag to keep the old overwrite behavior.
+- **An unwritable `--out` path (bad directory, permissions) now exits with code 2, not 1.** Exit code 1 is reserved for "some records failed to normalize" (see `--help`); a total write failure was previously indistinguishable from that on exit code alone.
+- A flag's value can no longer itself look like another flag (e.g. `--model --out foo.json` now errors instead of treating `--out` as the model id and silently normalizing the wrong file). A `--` terminator is available for a source path that itself starts with `-`.
+- Malformed JSON input no longer echoes a fragment of the raw file content in its error message.
+- A pretty-printed (multi-line) single JSON object is now accepted as input; previously only single-line objects, arrays, and JSONL were.
+
 ## v0.2.2 — 2026-09-11
 
 - CI fix: pin a current npm CLI (`npm install -g npm@latest`) in the publish workflow. Node 22's bundled npm predates OIDC trusted-publishing support; the v0.2.1 attempt signed provenance successfully but 404'd on the actual publish PUT.
