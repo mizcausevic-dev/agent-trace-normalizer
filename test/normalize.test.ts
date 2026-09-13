@@ -19,9 +19,16 @@ describe("auto-detection", () => {
     expect(u).toMatchObject({ provider: "openai", model: "gpt-4o", inputTokens: 10, outputTokens: 5, source: "openai" });
   });
 
-  it("normalizes an Anthropic response", () => {
-    const u = normalize({ model: "claude-opus-4-7", usage: { input_tokens: 20, output_tokens: 8 } });
-    expect(u).toMatchObject({ provider: "anthropic", inputTokens: 20, outputTokens: 8, source: "anthropic" });
+  it("throws on a bare input_tokens/output_tokens payload with no marker either way", () => {
+    // v0.2.x silently defaulted this shape to anthropic (a catch-all
+    // fallback). Anthropic's and OpenAI's Responses/Agents usage share the
+    // same key names, so with no positive evidence for either side this is
+    // genuinely ambiguous. v0.3.0 throws instead of guessing a price table;
+    // see "still normalizes a genuine Anthropic response carrying
+    // type: message" below and the CHANGELOG for the migration note.
+    expect(() => normalize({ model: "claude-opus-4-7", usage: { input_tokens: 20, output_tokens: 8 } })).toThrow(
+      /no adapter recognized/
+    );
   });
 
   it("normalizes a Bedrock response using the --model fallback", () => {
@@ -43,6 +50,33 @@ describe("auto-detection", () => {
       usage: { input_tokens: 500, output_tokens: 120 }
     });
     expect(u).toMatchObject({ provider: "openai", model: "gpt-5", inputTokens: 500, outputTokens: 120, source: "openai" });
+  });
+
+  it("normalizes a marker-less OpenAI Agents/Responses usage object as openai, not anthropic", () => {
+    // The exact shape from the review: no object: "response" envelope (the
+    // OpenAI Agents SDK's usage object carries none), but
+    // input_tokens_details/output_tokens_details are Anthropic-impossible
+    // key names, which alone is enough to identify it as OpenAI. v0.2.x
+    // silently mislabeled this anthropic and dropped both cache and
+    // reasoning tokens with no error.
+    const u = normalize({
+      model: "gpt-5-mini",
+      usage: {
+        input_tokens: 2000,
+        output_tokens: 500,
+        input_tokens_details: { cached_tokens: 1800 },
+        output_tokens_details: { reasoning_tokens: 400 }
+      }
+    });
+    expect(u).toMatchObject({
+      provider: "openai",
+      model: "gpt-5-mini",
+      inputTokens: 2000,
+      outputTokens: 500,
+      source: "openai",
+      cacheReadTokens: 1800,
+      reasoningTokens: 400
+    });
   });
 
   it("still normalizes a genuine Anthropic response carrying type: message", () => {
@@ -159,6 +193,17 @@ describe("errors", () => {
   it("forced provider overrides detection", () => {
     // openai usage shape, but force anthropic -> anthropic adapter can't read it
     expect(() => normalize({ usage: { prompt_tokens: 1, completion_tokens: 1 } }, { provider: "anthropic" })).toThrow();
+  });
+
+  it("rejects an invalid forced provider instead of resolving Object.prototype", () => {
+    // opts.provider is typed as ProviderId, but nothing stops a plain-JS
+    // caller from bypassing that at runtime. byId's null prototype means
+    // byId["__proto__"] is undefined, not Object.prototype.
+    expect(() =>
+      normalize({ usage: { prompt_tokens: 1, completion_tokens: 1 } }, {
+        provider: "__proto__" as unknown as "openai"
+      })
+    ).toThrow(/not a supported adapter/);
   });
 });
 
