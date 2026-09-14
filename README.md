@@ -40,6 +40,8 @@ const { usage: records, errors } = normalizeMany(mixedBatch, { model: "fallback"
 // records compose directly with llm-cost-span-exporter's exportSpans()
 ```
 
+See [examples/agent-inspect.md](examples/agent-inspect.md) for a worked recipe mapping `normalize()` output onto [AgentInspect](https://github.com/rajudandigam/agent-inspect)'s token-usage shape, including the Anthropic cache-heavy example where inclusive-vs-exclusive input counting is visible in the numbers.
+
 ## Supported shapes
 
 | Provider | Detected via | Tokens read from |
