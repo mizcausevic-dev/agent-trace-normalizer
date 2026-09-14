@@ -29,7 +29,7 @@ Anthropic's Messages API and OpenAI's Responses/Agents usage report `input_token
 
 **License change: AGPL-3.0-or-later -> Apache-2.0.**
 
-`agent-trace-normalizer` has 0 downloads and no external contributors; the license change needed no third-party consent. Copyright is held by Kinetic Gain LLC.
+`agent-trace-normalizer` has 0 downloads and no external contributors; the license change needed no third-party consent. Copyright is held by M Causevic individually, no IP assignment to Kinetic Gain LLC exists.
 
 - The normalizer is a ~200-line adapter layer with no moat to defend, its value is being easy to depend on. AGPL made that impossible in practice: a copyleft dependency in a server application is a blanket-ban for most engineering orgs regardless of how the analysis actually shakes out, since AGPL's network-interaction clause creates ambiguity most legal teams won't spend time resolving case by case.
 - **Published versions 0.1.0 through 0.2.2 remain AGPL-3.0-or-later.** A license grant already made can't be retracted; anyone depending on one of those versions keeps that license for that version. Every version from 0.3.0 onward is Apache-2.0.
